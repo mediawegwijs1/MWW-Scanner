@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body {
+            margin: 0; padding: 20px; background-color: #121212; color: #ffffff;
+            font-family: Arial, sans-serif; display: flex; flex-direction: column;
+            align-items: center; height: 100vh; box-sizing: border-box; text-align: center;
+        }
+        h2 { margin-bottom: 5px; }
+        
+        #reader {
+            width: 100%; max-width: 600px; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); background: #000; display: none; margin-top: 20px;
+        }
+        
+        .btn-blue {
+            background-color: #007BFF; color: white; border: none; padding: 20px 40px;
+            font-size: 20px; font-weight: bold; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-top: 50px;
+        }
+        
+        #success-container { 
+            display: none; margin-top: 40px; background-color: #1e1e1e; 
+            padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            width: 100%; max-width: 400px;
+        }
+        
+        .scanned-url {
+            word-wrap: break-word; color: #aaaaaa; margin-bottom: 25px; font-size: 16px;
+        }
+        
+        .btn-green {
+            display: block; background-color: #00C851; color: #000; font-weight: bold;
+            font-size: 20px; padding: 15px 30px; text-decoration: none; border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 15px;
+        }
+        .btn-gray {
+            display: block; width: 100%; background-color: #555; color: #fff; font-size: 16px;
+            padding: 12px 20px; text-decoration: none; border-radius: 8px; border: none; cursor: pointer;
+        }
+        #error-message { color: #ff4444; font-weight: bold; height: 25px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Video Scanner</h2>
+    <p style="color: #888; margin-top: 0;">Scan de code om video's in te leveren</p>
+    <div id="error-message"></div>
+    
+    <button id="start-btn" class="btn-blue">Start de Camera</button>
+    <div id="reader"></div>
+
+    <div id="success-container">
+        <h3 style="color: #00C851; margin-top: 0;">Code geaccepteerd!</h3>
+        <div id="scanned-text" class="scanned-url">Hier komt de link</div>
+        
+        <a id="final-link" href="#" class="btn-green">Open inlever-link</a>
+        <button class="btn-gray" onclick="location.reload()">Opnieuw scannen</button>
+    </div>
+
+    <script>
+        document.getElementById('start-btn').addEventListener('click', function() {
+            this.style.display = 'none';
+            document.getElementById('reader').style.display = 'block';
+
+            const html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const errorEl = document.getElementById("error-message");
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                function(decodedText) {
+                    // STRENGE CONTROLE: Begint de link met https://file.kiwi/ of http://file.kiwi/ ?
+                    if (decodedText.startsWith("https://file.kiwi/") || decodedText.startsWith("http://file.kiwi/")) {
+                        
+                        html5QrCode.stop().then(() => {
+                            document.getElementById("reader").style.display = "none";
+                            errorEl.style.display = "none";
+                            document.getElementById("success-container").style.display = "block";
+                            
+                            // Toon de URL en maak hem klikbaar
+                            document.getElementById("scanned-text").innerText = decodedText;
+                            document.getElementById("final-link").href = decodedText;
+                        }).catch(err => {
+                            console.error(err);
+                        });
+                        
+                    } else {
+                        // Verkeerde QR code gescand
+                        errorEl.innerText = "Let op: Dit is geen file.kiwi inlever-link.";
+                        setTimeout(() => { errorEl.innerText = ""; }, 3000);
+                    }
+                },
+                function(errorMessage) {
+                    // Negeer lege frames
+                }
+            ).catch(function(err) {
+                alert("Fout: Kon de camera niet openen. Controleer de rechten.");
+            });
+        });
+    </script>
+
+</body>
+</html>
