@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Video Scanner</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
@@ -46,14 +49,20 @@
         }
         #error-message { color: #ff4444; font-weight: bold; height: 25px; margin-top: 10px; }
 
-        /* Versienummer linksonderin */
+        /* Duidelijk zichtbaar versielabel */
         #version-tag {
             position: fixed;
-            bottom: 12px;
+            bottom: 15px;
             left: 15px;
-            font-size: 12px;
-            color: #555555;
+            font-size: 13px;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 4px 10px;
+            border-radius: 6px;
             font-family: monospace;
+            z-index: 9999;
             pointer-events: none;
             user-select: none;
         }
@@ -76,10 +85,44 @@
         <button class="btn-gray" onclick="location.reload()">Opnieuw scannen</button>
     </div>
 
-    <!-- Versie-indicator -->
-    <div id="version-tag">v0.5</div>
+    <!-- Dynamische versietag -->
+    <div id="version-tag">Laden...</div>
 
     <script>
+        // 1. Automatische versie- en cachecontrole via version.json
+        async function syncVersionAndCache() {
+            try {
+                const response = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const latestVersion = data.version;
+                const storedVersion = localStorage.getItem('mww_app_version');
+
+                // Werk direct het label linksonder bij
+                document.getElementById('version-tag').innerText = 'v' + latestVersion;
+
+                // Als het toestel nog geen versie kent of achterloopt op version.json
+                if (storedVersion && storedVersion !== latestVersion) {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    localStorage.setItem('mww_app_version', latestVersion);
+
+                    // Forceer refresh van index.html via timestamp parameter
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    window.location.replace(cleanUrl + '?v=' + latestVersion + '&t=' + Date.now());
+                } else {
+                    localStorage.setItem('mww_app_version', latestVersion);
+                }
+            } catch (e) {
+                document.getElementById('version-tag').innerText = 'v0.5';
+                console.warn("Versiecontrole niet geslaagd:", e);
+            }
+        }
+
+        syncVersionAndCache();
+
+        // 2. Scanner logica
         document.getElementById('start-btn').addEventListener('click', function() {
             this.style.display = 'none';
             document.getElementById('reader').style.display = 'block';
@@ -92,9 +135,7 @@
                 { facingMode: "environment" },
                 config,
                 function(decodedText) {
-                    // STRENGE CONTROLE: Begint de link met https://file.kiwi/ of http://file.kiwi/ ?
                     if (decodedText.startsWith("https://file.kiwi/") || decodedText.startsWith("http://file.kiwi/")) {
-                        
                         html5QrCode.stop().then(() => {
                             document.getElementById("reader").style.display = "none";
                             errorEl.style.display = "none";
@@ -102,28 +143,25 @@
                             
                             let finalUrl = decodedText;
 
-                            // Forceer Engelse taal voorafgaand aan het hekje (#)
+                            // Forceer Engelse interface vóór de hash (#)
                             if (finalUrl.includes("#") && !finalUrl.includes("?")) {
                                 finalUrl = finalUrl.replace("#", "?lang=en#");
                             } else if (!finalUrl.includes("?")) {
                                 finalUrl += "?lang=en";
                             }
                             
-                            // Toon de aangepaste URL en koppel aan de knop
                             document.getElementById("scanned-text").innerText = finalUrl;
                             document.getElementById("final-link").href = finalUrl;
                         }).catch(err => {
                             console.error(err);
                         });
-                        
                     } else {
-                        // Verkeerde QR code gescand
                         errorEl.innerText = "Let op: Dit is geen file.kiwi inlever-link.";
                         setTimeout(() => { errorEl.innerText = ""; }, 3000);
                     }
                 },
                 function(errorMessage) {
-                    // Negeer lege frames
+                    // Frame scan skips negeren
                 }
             ).catch(function(err) {
                 alert("Fout: Kon de camera niet openen. Controleer de rechten.");
