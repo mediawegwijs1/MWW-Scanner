@@ -151,7 +151,16 @@
                             }
                             
                             document.getElementById("scanned-text").innerText = finalUrl;
-                            document.getElementById("final-link").href = finalUrl;
+
+                            // Bouw de link om naar een Android Intent om Google Chrome te forceren
+                            let chromeIntentUrl = finalUrl;
+                            if (chromeIntentUrl.startsWith("https://")) {
+                                chromeIntentUrl = chromeIntentUrl.replace("https://", "intent://") + "#Intent;scheme=https;package=com.android.chrome;end;";
+                            } else if (chromeIntentUrl.startsWith("http://")) {
+                                chromeIntentUrl = chromeIntentUrl.replace("http://", "intent://") + "#Intent;scheme=http;package=com.android.chrome;end;";
+                            }
+
+                            document.getElementById("final-link").href = chromeIntentUrl;
                         }).catch(err => {
                             console.error(err);
                         });
