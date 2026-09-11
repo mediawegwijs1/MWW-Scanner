@@ -10,6 +10,7 @@
             margin: 0; padding: 20px; background-color: #121212; color: #ffffff;
             font-family: Arial, sans-serif; display: flex; flex-direction: column;
             align-items: center; height: 100vh; box-sizing: border-box; text-align: center;
+            position: relative;
         }
         h2 { margin-bottom: 5px; }
         
@@ -44,6 +45,18 @@
             padding: 12px 20px; text-decoration: none; border-radius: 8px; border: none; cursor: pointer;
         }
         #error-message { color: #ff4444; font-weight: bold; height: 25px; margin-top: 10px; }
+
+        /* Versienummer linksonderin */
+        #version-tag {
+            position: fixed;
+            bottom: 12px;
+            left: 15px;
+            font-size: 12px;
+            color: #555555;
+            font-family: monospace;
+            pointer-events: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -62,6 +75,9 @@
         <a id="final-link" href="#" class="btn-green">Open inlever-link</a>
         <button class="btn-gray" onclick="location.reload()">Opnieuw scannen</button>
     </div>
+
+    <!-- Versie-indicator -->
+    <div id="version-tag">v0.5</div>
 
     <script>
         document.getElementById('start-btn').addEventListener('click', function() {
@@ -84,9 +100,18 @@
                             errorEl.style.display = "none";
                             document.getElementById("success-container").style.display = "block";
                             
-                            // Toon de URL en maak hem klikbaar
-                            document.getElementById("scanned-text").innerText = decodedText;
-                            document.getElementById("final-link").href = decodedText;
+                            let finalUrl = decodedText;
+
+                            // Forceer Engelse taal voorafgaand aan het hekje (#)
+                            if (finalUrl.includes("#") && !finalUrl.includes("?")) {
+                                finalUrl = finalUrl.replace("#", "?lang=en#");
+                            } else if (!finalUrl.includes("?")) {
+                                finalUrl += "?lang=en";
+                            }
+                            
+                            // Toon de aangepaste URL en koppel aan de knop
+                            document.getElementById("scanned-text").innerText = finalUrl;
+                            document.getElementById("final-link").href = finalUrl;
                         }).catch(err => {
                             console.error(err);
                         });
